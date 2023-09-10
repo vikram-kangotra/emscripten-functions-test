@@ -1,10 +1,17 @@
 #[no_mangle]
 fn runthis() {
 
-    let _buffer = vec![0 as i8; 640 * 480 * 4];
+    let mut buffer = vec![0 as i8; 640 * 480 * 4];
 
-    emscripten_functions::emscripten::
-    main_thread_em_asm("
+    for i in 0..buffer.len() {
+        buffer[i] = i as i8;
+    }
+
+    #[used]
+    #[link_section = "em_asm"]
+    static CODE: [u8; 1162] = *b"
+        console.log($0);
+
         const mediaStream = navigator.mediaDevices.getUserMedia({ video: true });
         mediaStream.then((stream) => {
             const videoTrack = stream.getVideoTracks()[0];
@@ -26,11 +33,11 @@ fn runthis() {
                     const frameData = value;
 
                     const size = frameData.codedWidth * frameData.codedHeight * 4;
-                    const buffer = new Uint8Array(size);
+                    Module.videoBuffer = new Uint8Array(Module.HEAPU8.buffer, $0, size);
 
-                    frameData.copyTo(buffer);
+                    console.log(Module.videoBuffer);
 
-                    console.log(buffer);
+                    frameData.copyTo(Module.videoBuffer);
 
                     frameData.close();
 
@@ -40,5 +47,11 @@ fn runthis() {
 
             readFrame();
         }
-    ");
+    \0";
+
+    unsafe {
+        emscripten_functions_sys::emscripten::
+        emscripten_asm_const_int_sync_on_main_thread(CODE.as_ptr() as *const i8, "i\0".as_ptr() as *const i8, buffer.as_mut_ptr() as *const i8);
+    }
+
 }

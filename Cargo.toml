@@ -7,11 +7,5 @@ edition = "2021"
 crate-type = ["staticlib"]
 
 [dependencies]
-cxx = "1.0.107"
-cxx-build = "1.0.107"
 emscripten-functions = { path = "./emscripten-functions/emscripten-functions" }
 emscripten-functions-sys = { path = "./emscripten-functions/emscripten-functions-sys" }
-
-[profile.release]
-lto = true
-opt-level = "z"

@@ -7,5 +7,4 @@ extern "C" {
 int main() {
 
     runthis();
-
 }
