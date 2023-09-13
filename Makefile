@@ -1,6 +1,8 @@
 main.html: main.cpp libemscripten_function_test.a
-	em++ $(LDFLAGS) $^ -o main.html -s ASYNCIFY
+	em++ $(LDFLAGS) $^ -o main.html
 	wasm2wat main.wasm -o main.wat
+main.html: LDFLAGS += \
+	-s EXPORTED_FUNCTIONS='["_main", "_handle_video_frame"]'
 
 libemscripten_function_test.a: src/lib.rs
 	cargo build --target wasm32-unknown-emscripten --release

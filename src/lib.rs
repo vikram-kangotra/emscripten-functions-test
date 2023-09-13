@@ -1,4 +1,10 @@
 #[no_mangle]
+pub extern "C" fn handle_video_frame(buffer: *const i8, width: i32, height: i32) {
+
+    println!("width: {}, height: {}", width, height);
+}
+
+#[no_mangle]
 fn runthis() {
 
     let mut buffer = vec![0 as i8; 640 * 480 * 4];
@@ -9,8 +15,7 @@ fn runthis() {
 
     #[used]
     #[link_section = "em_asm"]
-    static CODE: [u8; 1162] = *b"
-        console.log($0);
+    static CODE: [u8; 1225] = *b"
 
         const mediaStream = navigator.mediaDevices.getUserMedia({ video: true });
         mediaStream.then((stream) => {
@@ -33,11 +38,13 @@ fn runthis() {
                     const frameData = value;
 
                     const size = frameData.codedWidth * frameData.codedHeight * 4;
-                    Module.videoBuffer = new Uint8Array(Module.HEAPU8.buffer, $0, size);
 
-                    console.log(Module.videoBuffer);
+                    const arrayBuffer = new ArrayBuffer(size);
+                    let videoBuffer = new Uint8Array(arrayBuffer);
 
-                    frameData.copyTo(Module.videoBuffer);
+                    frameData.copyTo(videoBuffer);
+
+                    Module._handle_video_frame(videoBuffer, frameData.codedWidth, frameData.codedHeight);
 
                     frameData.close();
 
@@ -53,5 +60,4 @@ fn runthis() {
         emscripten_functions_sys::emscripten::
         emscripten_asm_const_int_sync_on_main_thread(CODE.as_ptr() as *const i8, "i\0".as_ptr() as *const i8, buffer.as_mut_ptr() as *const i8);
     }
-
 }
