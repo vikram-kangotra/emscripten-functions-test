@@ -24,58 +24,28 @@ macro_rules! CODE_EXPR {
     };
 }
 
-fn type_name_of<T>(_: &T) -> &'static str {
+fn type_name_of<T: ?Sized>(_: &T) -> &'static str {
     std::any::type_name::<T>()
 }
 
 // support for wasm32 only
 
 fn is_pointer<T>(t: T) -> bool {
-    type_name_of(&t) == "*const i8" ||
-    type_name_of(&t) == "*mut i8" ||
-    type_name_of(&t) == "*const u8" ||
-    type_name_of(&t) == "*mut u8" ||
-    type_name_of(&t) == "*const i16" ||
-    type_name_of(&t) == "*mut i16" ||
-    type_name_of(&t) == "*const u16" ||
-    type_name_of(&t) == "*mut u16" ||
-    type_name_of(&t) == "*const i32" ||
-    type_name_of(&t) == "*mut i32" ||
-    type_name_of(&t) == "*const u32" ||
-    type_name_of(&t) == "*mut u32" ||
-    type_name_of(&t) == "*const i64" ||
-    type_name_of(&t) == "*mut i64" ||
-    type_name_of(&t) == "*const u64" ||
-    type_name_of(&t) == "*mut u64" ||
-    type_name_of(&t) == "*const isize" ||
-    type_name_of(&t) == "*mut isize" ||
-    type_name_of(&t) == "*const usize" ||
-    type_name_of(&t) == "*mut usize" ||
-    type_name_of(&t) == "*const f32" ||
-    type_name_of(&t) == "*mut f32" ||
-    type_name_of(&t) == "*const f64" ||
-    type_name_of(&t) == "*mut f64" ||
-    type_name_of(&t) == "*const char" ||
-    type_name_of(&t) == "*mut char"
+    type_name_of(&t).starts_with("*const") || type_name_of(&t).starts_with("*mut")
 }
 
 fn is_interger<T>(t: T) -> bool {
-    type_name_of(&t) == "char" ||
-    type_name_of(&t) == "i32" ||
-    type_name_of(&t) == "i64" ||
-    type_name_of(&t) == "u32" ||
-    type_name_of(&t) == "u64" ||
-    type_name_of(&t) == "i16" ||
-    type_name_of(&t) == "u16" ||
-    type_name_of(&t) == "i8" ||
-    type_name_of(&t) == "u8" ||
-    type_name_of(&t) == "isize" ||
-    type_name_of(&t) == "usize"
+    match type_name_of(&t) {
+        "char" | "i32" | "i64" | "u32" | "u64" | "i16" | "u16" | "i8" | "u8" | "isize" | "usize" => true,
+        _ => false
+    }
 }
 
 fn is_float<T>(t: T) -> bool {
-    type_name_of(&t) == "f64" ||
-    type_name_of(&t) == "f32"
+    match type_name_of(&t) {
+        "f32" | "f64" => true,
+        _ => false
+    }
 }
 
 macro_rules! process_arguments {
@@ -87,7 +57,9 @@ macro_rules! process_arguments {
         match $x {
             _ if is_interger($x) || is_pointer($x) => format!("i{}", process_arguments!($($rest)*)),
             _ if is_float($x) => format!("d{}", process_arguments!($($rest)*)),
-            _ => format!("\0") // TODO: provide some error message
+            _ => {
+                panic!("Unsupported type: {}", type_name_of(&$x));
+            }
         }
     };
 }
@@ -112,6 +84,13 @@ pub extern "C" fn handle_video_frame(buffer: *const i8, width: i32, height: i32)
 
 #[no_mangle]
 fn runthis() {
+
+    MAIN_THREAD_EM_ASM!(r#"
+        console.log($0);
+        console.log($1);
+        console.log($2);
+        console.log(UTF8ToString($2));
+    "#, 123, 12.34, "dsnfkd\0".as_ptr(),);
 
     MAIN_THREAD_EM_ASM!(r#"
 
